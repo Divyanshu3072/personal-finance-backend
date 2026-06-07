@@ -1,2 +1,4 @@
 .env
-node_modules/
+.env.save
+node_modules
+dist
