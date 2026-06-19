@@ -2,6 +2,7 @@ import { Router } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { prisma, getPrismaClient } from '../prisma';
+import { authenticateJWT, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
@@ -71,6 +72,58 @@ router.post('/login', async (req, res) => {
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Internal server error during login' });
+  }
+});
+
+router.get('/me', authenticateJWT, async (req: AuthRequest, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user!.id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        onboardingCompleted: true,
+        createdAt: true
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json(user);
+  } catch (error) {
+    console.error('Fetch profile error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.put('/me', authenticateJWT, async (req: AuthRequest, res) => {
+  try {
+    const { name, onboardingCompleted } = req.body;
+
+    // Build update data
+    const dataToUpdate: any = {};
+    if (name !== undefined) dataToUpdate.name = name;
+    if (onboardingCompleted !== undefined) dataToUpdate.onboardingCompleted = onboardingCompleted;
+
+    const user = await prisma.user.update({
+      where: { id: req.user!.id },
+      data: dataToUpdate,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        onboardingCompleted: true,
+        createdAt: true
+      }
+    });
+
+    res.json(user);
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
