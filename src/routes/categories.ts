@@ -72,6 +72,18 @@ router.put('/:id', async (req: AuthRequest, res) => {
 
   const normalizedName = name.trim();
 
+  const existingCategory = await prisma.category.findFirst({
+    where: {
+      userId: req.user!.id,
+      name: { equals: normalizedName, mode: 'insensitive' },
+      id: { not: String(id) }
+    }
+  });
+
+  if (existingCategory) {
+    return res.status(400).json({ message: 'Category already exists' });
+  }
+
   try {
     const updatedCategory = await prisma.category.update({
       where: { id: String(id) },
@@ -97,6 +109,14 @@ router.delete('/:id', async (req: AuthRequest, res) => {
 
   if (!category) {
     return res.status(404).json({ error: 'Category not found' });
+  }
+
+  const transactionCount = await prisma.transaction.count({
+    where: { categoryId: String(id), userId: req.user!.id }
+  });
+
+  if (transactionCount > 0) {
+    return res.status(400).json({ message: 'Cannot delete this category because it is used in transactions. Rename it instead.' });
   }
 
   await prisma.category.delete({
