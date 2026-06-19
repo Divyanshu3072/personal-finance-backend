@@ -32,7 +32,8 @@ router.post('/register', async (req, res) => {
     const userPrisma = getPrismaClient(user.id);
 
     await userPrisma.category.createMany({
-      data: defaultCategories.map(name => ({ name, userId: user.id }))
+      data: defaultCategories.map(name => ({ name, userId: user.id })),
+      skipDuplicates: true
     });
 
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'secret', { expiresIn: '1d' });
