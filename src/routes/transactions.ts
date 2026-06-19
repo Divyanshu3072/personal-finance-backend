@@ -9,13 +9,17 @@ router.use(authenticateJWT);
 router.get('/', async (req: AuthRequest, res) => {
   const prisma = getPrismaClient(req.user!.id);
   const transactions = await prisma.transaction.findMany({
-    where: { userId: req.user!.id }
+    where: { userId: req.user!.id },
+    orderBy: [
+      { transactionDate: 'desc' },
+      { createdAt: 'desc' }
+    ]
   });
   res.json(transactions);
 });
 
 router.post('/', async (req: AuthRequest, res) => {
-  const { accountId, categoryId, amount, reason, type, timestamp } = req.body;
+  const { accountId, categoryId, amount, reason, type, transactionDate } = req.body;
   const prisma = getPrismaClient(req.user!.id);
 
   const numericAmount = Number(amount);
@@ -48,7 +52,7 @@ router.post('/', async (req: AuthRequest, res) => {
       amount: numericAmount,
       reason,
       type,
-      timestamp: timestamp ? new Date(timestamp) : new Date(),
+      transactionDate: transactionDate ? new Date(transactionDate) : new Date(),
       userId: req.user!.id
     }
   });
@@ -67,7 +71,7 @@ router.post('/', async (req: AuthRequest, res) => {
 
 router.put('/:id', async (req: AuthRequest, res) => {
   const { id } = req.params;
-  const { accountId, categoryId, amount, reason, type, timestamp } = req.body;
+  const { accountId, categoryId, amount, reason, type, transactionDate } = req.body;
   const prisma = getPrismaClient(req.user!.id);
 
   try {
@@ -85,7 +89,7 @@ router.put('/:id', async (req: AuthRequest, res) => {
     const newAccountId = accountId !== undefined ? accountId : oldTransaction.accountId;
     const newCategoryId = categoryId !== undefined ? categoryId : oldTransaction.categoryId;
     const newReason = reason !== undefined ? reason : oldTransaction.reason;
-    const newTimestamp = timestamp !== undefined ? new Date(timestamp) : oldTransaction.timestamp;
+    const newTransactionDate = transactionDate !== undefined ? new Date(transactionDate) : oldTransaction.transactionDate;
 
     // Validations
     if (isNaN(newAmount) || newAmount <= 0) {
@@ -172,7 +176,7 @@ router.put('/:id', async (req: AuthRequest, res) => {
           amount: newAmount,
           reason: newReason,
           type: newType,
-          timestamp: newTimestamp
+          transactionDate: newTransactionDate
         }
       })
     );
